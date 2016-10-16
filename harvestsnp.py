@@ -7,14 +7,63 @@ import paho.mqtt.client as mqtt
 from time import sleep, gmtime, strftime
 import ssl
 import os
+import logging
+import logging.handlers
+import argparse
 
 import ConfigParser
+
+# Defaults
+LOG_FILENAME = "/var/log/weathersys/harvestsnp.log"
+LOG_LEVEL = logging.INFO  # Could be e.g. "DEBUG" or "WARNING"
+
+# Define and parse command line arguments
+parser = argparse.ArgumentParser(description="SNAP data logger")
+parser.add_argument("-l", "--log", help="file to write log to (default '" + LOG_FILENAME + "')")
+
+# If the log file is specified on the command line then override the default
+args = parser.parse_args()
+if args.log:
+        LOG_FILENAME = args.log
+
+# Configure logging to log to a file, making a new file at midnight and keeping the last 3 day's data
+# Give the logger a unique name (good practice)
+logger = logging.getLogger(__name__)
+# Set the log level to LOG_LEVEL
+logger.setLevel(LOG_LEVEL)
+# Make a handler that writes to a file, making a new file at midnight and keeping 3 backups
+handler = logging.handlers.TimedRotatingFileHandler(LOG_FILENAME, when="midnight", backupCount=3)
+# Format each log message like this
+formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+# Attach the formatter to the handler
+handler.setFormatter(formatter)
+# Attach the handler to the logger
+logger.addHandler(handler)
+
+
+# Make a class we can use to capture stdout and sterr in the log
+class MyLogger(object):
+        def __init__(self, logger, level):
+                """Needs a logger and a logger level."""
+                self.logger = logger
+                self.level = level
+
+        def write(self, message):
+                # Only log if there is a message (not just a new line)
+                if message.rstrip() != "":
+                        self.logger.log(self.level, message.rstrip())
+
+# Replace stdout with logging to file at INFO level
+sys.stdout = MyLogger(logger, logging.INFO)
+# Replace stderr with logging to file at ERROR level
+sys.stderr = MyLogger(logger, logging.ERROR)
 
 
 connected=False
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
+    global connected
     connected=True
     print("Connected with result code "+str(rc))
 
@@ -23,8 +72,9 @@ def on_publish(client, userdata, mid):
         print "Publish Mid: "+ str(mid)
 
 def on_disconnect(client, userdata, rc):
+    global connected
     if rc != 0:
-        print("Unexpected disconnection.")
+        sys.stderr.write("Unexpected disconnection.")
         connected=False
 
 def check_connection():
@@ -40,7 +90,7 @@ def PrintException():
     filename = f.f_code.co_filename
     linecache.checkcache(filename)
     line = linecache.getline(filename, lineno, f.f_globals)
-    print 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
+    sys.stderr.write( 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
 
 def jsonlog(d):
 	print (d)
@@ -111,6 +161,7 @@ while run:
 						ctime=strftime("%Y-%m-%d %H:%M:%S", gmtime())
 						print ctime, " - ", adr, ", ", mq_name, ", ", type, ", ", realtemp, ", ", realhumi
 						try:
+							check_connection()
 							mqttc.publish(mq_topic+'/name', mq_name)
 							mqttc.publish(mq_topic+'/addr', adr)
 							mqttc.publish(mq_topic+'/temperature', float(realtemp))
@@ -120,7 +171,7 @@ while run:
 #						print dat['data']
 					elif ((type==1)and(len(dta['data'])==6)):
 						if (dta['data']=='010505'):
-							strlog(adr + ' Sensor error')
+							sys.stderr.write(adr + ' Sensor error')
 					else:
 						jsonlog(dat)
 			else:

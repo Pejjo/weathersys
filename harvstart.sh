@@ -1,6 +1,6 @@
 #!/bin/bash
-#  /usr/local/harvest/startrfm.sh &
-/usr/local/harvest/startnda.sh &
-/usr/local/harvest/startsnp.sh &
-/usr/local/harvest/startivt.sh &
+#/etc/init.d/harvestrfm start
+/etc/init.d/harvestnda start
+/etc/init.d/harvestsnp start
+/etc/init.d/harvestivt start
 
