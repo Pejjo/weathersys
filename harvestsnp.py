@@ -135,7 +135,7 @@ while run:
 		except ValueError:
 			PrintException()
 	
-		if 'method' in jdata:
+		if jdata is not None and 'method' in jdata:
 			met=jdata['method']
 			dat=jdata['params']	
 

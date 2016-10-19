@@ -201,7 +201,7 @@ while run:
 					try:
 						check_connection()
 						mqttc.publish(mq_topic+'/name', mq_name)
-						mqttc.publish(mq_topic+'/energy', cntval)
+						mqttc.publish(mq_topic+'/energy', cntval*50) # 20 pulses / kWh -> 50W / pulse
 					except ValueError:
 						PrintException()
 
