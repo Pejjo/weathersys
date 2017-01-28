@@ -66,8 +66,12 @@ connected=False
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     global connected
-    connected=True
     print("Connected with result code "+str(rc))
+    if rc!=0 :
+        mqttc.reconnect()
+	connected=False
+    else :
+	connected=True
 
 # The callback for when a PUBLISH message is received from the server.
 def on_publish(client, userdata, mid):
@@ -77,6 +81,7 @@ def on_disconnect(client, userdata, rc):
     global connected
     if rc != 0:
         sys.stderr.write("Unexpected disconnection.")
+	mqttc.reconnect()
         connected=False
 
 def check_connection():
@@ -179,13 +184,19 @@ while run:
 							mqttc.publish(mq_topic, data)
 				except ValueError:
 					PrintException()
+				except: 
+					PrintException()
 #						print dat['data']
 		else:
 			try:
 				sys.stderr.write('Parse error: '.join(cvsdata))
 			except ValueError:
 				PrintException()
-	mqttc.loop(2)
+	try:
+		mqttc.loop(2)
+	except:
+		PrintException()
+
 	sleep(0.5)
 
 

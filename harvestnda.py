@@ -40,6 +40,8 @@ handler.setFormatter(formatter)
 # Attach the handler to the logger
 logger.addHandler(handler)
 
+def s8(value):
+    return -(value & 0x80) | (value & 0x7f)
 
 # Make a class we can use to capture stdout and sterr in the log
 class MyLogger(object):
@@ -64,8 +66,14 @@ connected=False
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     global connected
-    connected=True
     print("Connected with result code "+str(rc))
+    if rc != 0:
+        print("Unexpected disconnection. Reconnecting...")
+        mqttc.reconnect()
+	connected=False
+    else :
+        print "Connected successfully"
+	conected=True
 
 # The callback for when a PUBLISH message is received from the server.
 def on_publish(client, userdata, mid):
@@ -75,6 +83,7 @@ def on_disconnect(client, userdata, rc):
     global connected
     if rc != 0:
         print("Unexpected disconnection.")
+	mqttc.reconnect()
 	connected=False
 
 def check_connection():
@@ -153,6 +162,7 @@ while run:
 	crcval=1	#just set other than 1 to trap errors later
 	if len(line)>0:
 		splitdta=line.split(':')
+		print (line)
 		if (len(splitdta)==3): #Looks good
 
 			try:
@@ -169,16 +179,25 @@ while run:
 				elif (splitdta[0]=='*0'):
 					type="dht"
 					crcval=0 #Address byte
-					vals=array('b')
+					vals=array('B')
+					if (len(splitdta[1])==10):
+						print("Handling buggy negative integer format (0xffnn instead of 0xnn). Update firmware! (%02 does not give exactly 2 bytes at negative numbers)")
+						splitdta[1]=splitdta[1][2:]
+						crcval+=0xff00
                                         for n in range(0, 8, 2):
-                                                curbyte=int(splitdta[1][n:n+2],16)
+                                                curbyte=int(splitdta[1][n:n+2],16)&0xff
 						vals.append(curbyte)
 						crcval+=curbyte
                                         crcval+=int(splitdta[2],16)
                                         crcval&=0xffff
-					tmpval=vals[0]+(vals[1]/10.0)
+					if (vals[0]&0x80):
+						print("MSB")
+					if (vals[0]>=0):
+						tmpval=s8(vals[0])+(vals[1]/10.0)
+					else:
+						tmpval=s8(vals[0])-(vals[1]/10.0)
 					humval=vals[2]+(vals[3]/10.0)
-#                                        print type, tmpval, humval, crcval
+                                        print("type=",type, " tmp=",tmpval, " v0=", vals[0], " v1=", vals[1], " hum=", humval, " crc=",crcval)
 
 				else:
 					type="err"
@@ -200,26 +219,32 @@ while run:
 					print ctime, " - ", mq_name, ", ", type, ", ", cntval
 					try:
 						check_connection()
-						mqttc.publish(mq_topic+'/name', mq_name)
-						mqttc.publish(mq_topic+'/energy', cntval*50) # 20 pulses / kWh -> 50W / pulse
+						mqttc.publish(mq_topic+'/name', mq_name,qos=1)
+						mqttc.publish(mq_topic+'/energy', cntval*50,qos=1) # 20 pulses / kWh -> 50W / pulse
 					except ValueError:
 						PrintException()
-
+					except:
+						PrintException()
 				elif (type=='dht'):
                                         print ctime, " - ", mq_name, ", ", type, ", ", tmpval, ", ",humval
                                         try:
 						check_connection()
-                                                mqttc.publish(mq_topic+'/name', mq_name)
-                                                mqttc.publish(mq_topic+'/temperature', float(tmpval))
-                                                mqttc.publish(mq_topic+'/humidity', float(humval))
+                                                mqttc.publish(mq_topic+'/name', mq_name, qos=1)
+                                                mqttc.publish(mq_topic+'/temperature', float(tmpval),qos=1)
+                                                mqttc.publish(mq_topic+'/humidity', float(humval),qos=1)
                                         except ValueError:
                                                 PrintException()
+					except:
+						PrintException()
 
 
 			else:
 				mq_name='Unknown'
 				mq_topic=default_topic+adr
+        try:
+                mqttc.loop(2)
+        except:
+                PrintException()
 
-	mqttc.loop(2)
 	sleep(1)
 
