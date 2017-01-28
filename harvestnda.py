@@ -190,13 +190,24 @@ while run:
 						crcval+=curbyte
                                         crcval+=int(splitdta[2],16)
                                         crcval&=0xffff
-					if (vals[0]&0x80):
-						print("MSB")
-					if (vals[0]>=0):
-						tmpval=s8(vals[0])+(vals[1]/10.0)
-					else:
-						tmpval=s8(vals[0])-(vals[1]/10.0)
-					humval=vals[2]+(vals[3]/10.0)
+					if (vals[0]&0x80): #Negative
+						hexval=((vals[0]&0x7f)<<8)+vals[1] # Reasemble
+						intval=int(hexval/10)
+						decval=hexval%10						
+						tmpval=(intval+(decval/10.0))*(-1.0)
+					else: #Plus
+                                                hexval=((vals[0]&0x7f)<<8)+vals[1] # Reasemble
+                                                intval=int(hexval/10)
+                                                decval=hexval%10
+                                                tmpval=intval+(decval/10.0)
+
+					print (hexval, intval, decval,tmpval)
+					hexval=((vals[2]&0x7f)<<8)+vals[3] # Reasemble
+					intval=int(hexval/10)
+					decval=hexval%10
+					humval=s8(intval)+(decval/10.0)
+					print (hexval, intval, decval, humval)
+
                                         print("type=",type, " tmp=",tmpval, " v0=", vals[0], " v1=", vals[1], " hum=", humval, " crc=",crcval)
 
 				else:
