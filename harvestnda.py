@@ -92,7 +92,6 @@ def check_connection():
         mqttc.connect(config.get("harvester", "server"), config.get("harvester", "port"), 60)
 
 
-
 def PrintException():
     exc_type, exc_obj, tb = sys.exc_info()
     f = tb.tb_frame
@@ -227,7 +226,7 @@ while run:
 				ctime=strftime("%Y-%m-%d %H:%M:%S", gmtime())
 
 				if (type=='cnt'):
-					print ctime, " - ", mq_name, ", ", type, ", ", cntval
+					print( ctime, " - ", mq_name, ", ", type, ", ", cntval)
 					try:
 						check_connection()
 						mqttc.publish(mq_topic+'/name', mq_name,qos=1)

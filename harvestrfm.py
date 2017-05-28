@@ -53,7 +53,7 @@ else:
 
 rfm_lib=ctypes.cdll.LoadLibrary('/home/wthr/rfm22b-master/rfm.so')
 
-rfm_lib.rf_init(0)
+rfm_lib.rf_init(0,"FTOH7Z0A")
 
 datadict = [{'Prefix': 'A', 'Length': 25, 'Keys':['Idx','ID'], 'Topic':'Sensor', 'Algo':[0,0]},{'Prefix': 'B', 'Length': 18, 'Keys':['Cycle','Temperature'], 'Topic':'Sensor', 'Algo':[4,1]},{'Prefix': 'Y', 'Length': 16, 'Keys':['Reset','Sensors'], 'Topic':'Board', 'Algo':[3,0]},{'Prefix': 'Z', 'Length': 16, 'Keys':['Reset','Battery'], 'Topic':'Board','Algo':[3,2]}]
 
