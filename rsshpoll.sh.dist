@@ -1,0 +1,55 @@
+#!/bin/bash
+
+
+# This script checks a specific web url for a token string. If token is found, a reverse SSH tunnel is created to port at host. Local port will be fwdport
+# Prior to connecting, a password less ssh key pair mst be created and  the public file added to autorized_keys at host.
+
+# Folowing config can be added to sshd_config at remote host to improve security:
+# Notice: [fwdport] should be changed to port numnber. 
+#  Match User rsshuser
+#     X11Forwarding no
+#     GatewayPorts no
+#     AllowAgentForwarding no
+#     PermitOpen localhost:[fwdport] #doesnt really work with remote ports
+#     ForceCommand echo 'This account is remote only or some other fun text'
+
+
+# And / or this added to authorized_keys before the ssh-xxx key..... portion:
+#  command="/bin/false",no-agent-forwarding,no-X11-forwarding,permitopen="localhost:[fwdport]" ssh-xxx key..... 
+
+
+SYSTEMNR=123456
+TOKENSTR="LetMeIn"
+POLLURL="www.your.host/rssh/index.php?no=$SYSTEMNR"
+HOSTPORT=22
+FWDPORT=62222
+USERNAME=remoteuser
+HOSTNAME=ssh.your.host
+IDTYFILE=/home/pi/.ssh/id_remoteuser
+
+createTunnel() {
+  /usr/bin/ssh -p $HOSTPORT  -N -R $FWDPORT:localhost:22  "$USERNAME"@"$HOSTNAME" -i $IDTYFILE
+  if [[ $? -eq 0 ]]; then
+    echo Tunnel to jumpbox created successfully
+  else
+    echo An error occurred creating a tunnel to jumpbox. RC was $?
+  fi
+}
+
+
+count=`curl -s $POLLURL | grep -c "$TOKENSTR"`
+
+if [ "$count" != "0" ]
+    then
+	/bin/pidof ssh
+	if [[ $? -ne 0 ]]; then
+#		echo Creating new tunnel connection
+  		createTunnel
+	fi
+
+    exit 0   
+else
+	killall ssh
+fi
+
+
