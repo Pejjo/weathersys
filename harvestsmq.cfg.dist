@@ -1,0 +1,17 @@
+[harvester]
+serial=/dev/ttymrsP2
+server=127.0.0.1
+user=usr
+pass=xxx
+port=8883
+clientname=SMTQ
+
+[dht1]
+name=Ryggas
+topic=sensors/ryggas
+
+[dht2]
+name=Vind
+topic=sensors/vind
+
+
